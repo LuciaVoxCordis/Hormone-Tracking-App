@@ -3,38 +3,61 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-#~~~~~~~~Frequently used variables~~~~~~~~#
+#~~~~~~~~Globally used variables~~~~~~~~#
 
 wdir = path.dirname(__file__)
 date_format = "%d-%m-%Y"
 
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Results CSV Class~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-class RESULTS_CSV:
-    file_name = "Results.csv"
-    columns = ["Date", "Oestradiol", "Testosterone"]
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~CSV Class~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+class CSV:
+    results_filename = "results.csv"
+    results_columns = ["Date", "Oestradiol", "Testosterone"]
+    notes_filename = "Notes.csv"
+    notes_columns = ["Date", "Note"]
     
-
     @classmethod
     def initialize_csv(cls):
         try: 
-            pd.read_csv(path.join(wdir, cls.file_name))  
+            pd.read_csv(path.join(wdir, cls.results_filename))  
             print ("Results.csv found!")
             return 
         except FileNotFoundError:
             print ("Results.csv not found, Creating...")
-            df = pd.DataFrame(columns=cls.columns)
-            df.to_csv(path.join(wdir, cls.file_name), index = False)
+            df = pd.DataFrame(columns=cls.results_columns)
+            df.to_csv(path.join(wdir, cls.results_filename), index = False)
+        try: 
+            pd.read_csv(path.join(wdir, cls.notes_filename))  
+            print ("Notes.csv found!")
+            return 
+        except FileNotFoundError:
+            print ("Notes.csv not found, Creating...")
+            df = pd.DataFrame(columns=cls.notes_columns)
+            df.to_csv(path.join(wdir, cls.notes_filename), index = False)
             
     @classmethod
-    def add_entry(cls, date, e, t):
-        data = {"D": [date], "E": [e], "T": [t]}
+    def add_entry(cls, mode, *args):            
+        if mode == "results":
+            filename = cls.results_filename
+            date, estrogen, testosterone = args
+            data = {"D": [date], "E": [estrogen], "T": [testosterone]}
+        elif mode == "notes":
+            filename = cls.notes_filename
+            date, note = args
+            data = {"D": [date],"n": [note]}
+            
         df = pd.DataFrame(data=data)
-        df.to_csv(path.join(wdir, cls.file_name), mode = 'a', index=False, header=False)
-    
+        df.to_csv(path.join(wdir, filename), mode = 'a', index=False, header=False)
+            
     @classmethod
-    def remove_entry(cls, date):     #WIP
-        df = pd.read_csv(path.join(wdir, cls.file_name))
+    def remove_entry(cls, mode, date): #refactor to use .drop method
+        if mode == "result":
+            filename = cls.results_filename
+            columns = cls.results_columns
+        elif mode == "note":
+            filename = cls.notes_filename
+            columns = cls.notes_columns
+
+        df = pd.read_csv(path.join(wdir, filename))
         df["Date"] = pd.to_datetime(df["Date"], format = date_format)
         date = datetime.strptime(date, date_format)
         mask = (df["Date"] == date)
@@ -44,17 +67,17 @@ class RESULTS_CSV:
         else:
             mask = (df["Date"] != date)
             filtered_df = df.loc[mask].sort_values("Date")
-            df = pd.DataFrame(columns = cls.columns)
-            df.to_csv(path.join(wdir, cls.file_name), index = False)
-            filtered_df.to_csv(path.join(wdir, cls.file_name), mode = 'a', index=False, header=False, date_format=date_format)
-
+            df = pd.DataFrame(columns = columns)
+            df.to_csv(path.join(wdir, filename), index = False)
+            filtered_df.to_csv(path.join(wdir, filename), mode = 'a', index=False, header=False, date_format=date_format)
+        
     @classmethod
     def get_results(cls, start_date, end_date):
-        df = pd.read_csv(path.join(wdir, cls.file_name))
+        df = pd.read_csv(path.join(wdir, cls.results_filename))
         df["Date"] = pd.to_datetime(df["Date"], format = date_format)
         start_date = datetime.strptime(start_date, date_format)
         end_date = datetime.strptime(end_date, date_format)
-        mask = (df["Date"] >= start_date) & (df["Date"] <= end_date) #this line took far too much googling and I'm still not *quite* sure how it works
+        mask = (df["Date"] >= start_date) & (df["Date"] <= end_date)
         filtered_df = df.loc[mask].sort_values("Date")
         if filtered_df.empty:
             print("No results found within the given range.")
@@ -64,59 +87,19 @@ class RESULTS_CSV:
         return filtered_df
     
     @classmethod
-    def view_all(cls):
-        df = pd.read_csv(path.join(wdir, cls.file_name))
+    def view_all(cls, mode):
+        if mode == "results":
+            filename = cls.results_filename
+        elif mode == "notes":
+            filename = cls.notes_filename
+            
+        df = pd.read_csv(path.join(wdir, filename))
         df["Date"] = pd.to_datetime(df["Date"], format = date_format)
         df.sort_values("Date", inplace = True)
         print (df.to_string(index = False, formatters = {"Date": lambda x: x.strftime(date_format)} ))
         return df
-    
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Notes CSV Class~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-class NOTES_CSV:
-    file_name = "Notes.csv"
-    columns = ["Date", "Note"]
-    
-    @classmethod
-    def initialize_csv(cls):
-        try: 
-            pd.read_csv(path.join(wdir, cls.file_name))  
-            print ("Notes.csv found!")
-            return 
-        except FileNotFoundError:
-            print ("Notes.csv not found, Creating...")
-            df = pd.DataFrame(columns=cls.columns)
-            df.to_csv(path.join(wdir, cls.file_name), index = False)
-            
-    @classmethod
-    def add_entry(cls, date, note):
-        data = {"D": [date],"n": [note]}
-        df = pd.DataFrame(data=data)
-        df.to_csv(path.join(wdir, cls.file_name), mode = 'a', index=False, header=False)
-        
-    @classmethod
-    def remove_entry(cls, date):     #WIP
-        df = pd.read_csv(path.join(wdir, cls.file_name))
-        df["Date"] = pd.to_datetime(df["Date"], format = date_format)
-        date = datetime.strptime(date, date_format)
-        mask = (df["Date"] == date)
-        isolated_entry = df.loc[mask].sort_values("Date")
-        if isolated_entry.empty:
-            print("No results found with the given date.")
-        else:
-            mask = (df["Date"] != date)
-            filtered_df = df.loc[mask].sort_values("Date")
-            df = pd.DataFrame(columns = cls.columns)
-            df.to_csv(path.join(wdir, cls.file_name), index = False)
-            filtered_df.to_csv(path.join(wdir, cls.file_name), mode = 'a', index=False, header=False, date_format=date_format)
-            
-    @classmethod
-    def view_notes(cls):
-        df = pd.read_csv(path.join(wdir, cls.file_name))
-        df["Date"] = pd.to_datetime(df["Date"], format = date_format)
-        df.sort_values("Date", inplace = True)
-        print (df.to_string(index = False, formatters = {"Date": lambda x: x.strftime(date_format)} ))
-        return df
-    
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Settings JSON Class~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 class JSON:
     file_name = "Settings.json"
@@ -144,19 +127,16 @@ def add_result():
     date = get_date("please enter the date of the test (DD-MM-YYYY): ")
     e = float(input("please enter Oestradiol levels (pmol/L): "))
     t = float(input("Please enter Testosterone levels (nmol/L): "))
-    RESULTS_CSV.add_entry(date, e, t)
+    CSV.add_entry("results",date, e, t)
     
 def add_note():
     date = get_date("Please enter a date for this note/event (DD-MM-YYYY): ")
     note = input("Please enter the note/event: ")
-    NOTES_CSV.add_entry(date, note)
+    CSV.add_entry("notes",date, note)
     
 def remove(mode):
     date = get_date("Please enter the date of the entry you would like to remove (DD-MM-YYYY)")
-    if mode == "result":
-        RESULTS_CSV.remove_entry(date)
-    elif mode == "note":
-        NOTES_CSV.remove_entry(date)
+    CSV.remove_entry(mode, date)
 
 def get_date(promt):
     date_str = input(promt)
@@ -202,7 +182,7 @@ def change_t_upper():
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Plotting~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#    
 def plot_results(results_df):
     settings_df = pd.read_json(path.join(wdir, JSON.file_name), typ = 'series')
-    notes_df = pd.read_csv(path.join(wdir, NOTES_CSV.file_name))
+    notes_df = pd.read_csv(path.join(wdir, CSV.notes_filename))
     notes_df["Date"] = pd.to_datetime(notes_df["Date"], format = date_format)
     results_df.set_index("Date", inplace = True)
 
@@ -257,13 +237,13 @@ def main():
         elif choice == "2":
             remove("result")
         elif choice == "3":
-            df = RESULTS_CSV.view_all()
+            df = CSV.view_all("results")
             if input("Do you wish to see a plot? (Y/N)").lower() == "y":
                 plot_results(df)
         elif choice == "4":
             start_date = get_date("Please enter the date to display results from (DD-MM-YYYY): ")
             end_date = get_date("Please enter the date to display results to (DD-MM-YYYY): ")
-            df = RESULTS_CSV.get_results(start_date, end_date)
+            df = CSV.get_results(start_date, end_date)
             if input("Do you wish to see a plot? (Y/N)").lower() == "y":
                 plot_results(df)
         elif choice == "5":
@@ -271,7 +251,7 @@ def main():
         elif choice == "6":
             remove("note")
         elif choice == "7":
-            df = NOTES_CSV.view_notes()
+            df = CSV.view_all("notes")
             input ("Press any key to continue")
         elif choice == "8":
             settings_df = pd.read_json(path.join(wdir, JSON.file_name), typ = 'series')
@@ -287,18 +267,10 @@ def main():
             
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Run~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 if __name__ == "__main__":
-    RESULTS_CSV.initialize_csv()
-    NOTES_CSV.initialize_csv()
+    CSV.initialize_csv()
     JSON.initialize_json()
     
-    df = pd.read_csv(path.join(wdir, NOTES_CSV.file_name))
-    print (df)
+    df = pd.read_csv(path.join(wdir, CSV.notes_filename))
+    print(df)
 
     main() #and pray
-    
-
-    '''
-    to do:
-    Clean up & re-do the remove classmethod using pd.drop() if I can figure the damned thing out
-    GUI
-    '''
