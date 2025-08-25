@@ -80,6 +80,5 @@ class CSV:
             filename = cls.notes_filename            
         df = pd.read_csv(path.join(wdir, filename))
         df["Date"] = pd.to_datetime(df["Date"], format = date_format)
-        df.sort_values("Date", inplace = True)
-        print (df.to_string(index = False, formatters = {"Date": lambda x: x.strftime(date_format)} ))
+        df.sort_values(by = "Date", inplace = True)
         return df

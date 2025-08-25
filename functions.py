@@ -10,11 +10,16 @@ def initialize_data_folder():
         print ("Data folder not found, Creating...")
         mkdir(wdir)
         
-def add_result():
-    date = get_date("please enter the date of the test (DD-MM-YYYY): ")
-    e = float(input("please enter Oestradiol levels (pmol/L): "))
-    t = float(input("Please enter Testosterone levels (nmol/L): "))
-    CSV.add_entry("results",date, e, t)
+def add_result(date, e, t):
+    date = get_date(str(date))
+    e = float(e)
+    t = float(t)
+    data = [date, e, t]
+    if ValueError in data:
+        return ValueError
+    else:
+        return data
+
     
 def add_note():
     date = get_date("Please enter a date for this note/event (DD-MM-YYYY): ")
@@ -25,14 +30,13 @@ def remove(mode):
     date = get_date("Please enter the date of the entry you would like to remove (DD-MM-YYYY)")
     CSV.remove_entry(mode, date)
 
-def get_date(promt):
-    date_str = input(promt)
+def get_date(date_str):
     try:
         valid_date = datetime.strptime(date_str,date_format)
         return valid_date.strftime(date_format)
     except ValueError:
         print("invalid date format.")
-        return get_date("Please enter a valid date format (DD-MM-YYYY)")
+        return ValueError
     
 def change_e_lower():
     try:

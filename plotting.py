@@ -1,5 +1,5 @@
 from global_vars import *
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 from csv_class import CSV
 from json_class import JSON
